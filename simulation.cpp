@@ -391,10 +391,12 @@ private:
 };
 
 
-void simulate(std::string mode, std::vector<float> arrival, std::vector<float> service,
+std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::vector<float> service,
 	       	int m, float setup_time,
 	       	float delayedoff_time, float time_end)
 {
+	std::vector<Job*> all_jobs;
+
 	if(mode=="random"){
 
 	
@@ -404,8 +406,6 @@ void simulate(std::string mode, std::vector<float> arrival, std::vector<float> s
 		float m_clock = 0;
 		float step = get_min_step(arrival, service);
 		debug_cout( "Time step: " << step <<"\n");
-
-		std::vector<Job*> all_jobs;
 
 		// start dispatcher with server
 		Dispatcher dp(m, setup_time, delayedoff_time, m_clock);
@@ -436,20 +436,28 @@ void simulate(std::string mode, std::vector<float> arrival, std::vector<float> s
 		}
 		std::cout << "mrt: "<<sum / (float)all_jobs.size() << "\n";
 
-		
+
 	
 	}else{
 		std::cerr << "unavilable mode\n";
 	}
+	return all_jobs;
 }
 
 
 int main(int argc, char *argv[]){
+	int seqnum = 1;
+
+	std::string n_mode = "mode_" + std::to_string(seqnum) + ".txt";
+	std::string n_para = "para_"+ std::to_string(seqnum) + ".txt";
+	std::string n_arrival = "arrival_"+ std::to_string(seqnum) + ".txt";
+	std::string n_service = "service_"+ std::to_string(seqnum) + ".txt";
+	
 	// setup files to read
-	std::ifstream f_mode("mode_1.txt");
-	std::ifstream f_para("para_1.txt");
-	std::ifstream f_arrival("arrival_1.txt");
-	std::ifstream f_service("service_1.txt");
+	std::ifstream f_mode(n_mode);
+	std::ifstream f_para(n_para);
+	std::ifstream f_arrival(n_arrival);
+	std::ifstream f_service(n_service);
 
 	// setup containers for arguments
 	std::string mode;
@@ -481,6 +489,12 @@ int main(int argc, char *argv[]){
 	}
 
 	time_end = 0; // only relevent in random mode
+
+	// close files
+	f_mode.close();
+	f_para.close();
+	f_arrival.close();
+	f_service.close();
 	
 	// check arguemnt value
 	debug_cout( "Mode: " << mode << "\n");
@@ -490,7 +504,29 @@ int main(int argc, char *argv[]){
 	debug_cout( "arrival: "<< arrival);
 	debug_cout( "service: " << service);
 
-	simulate(mode, arrival, service, n_server, setup_time,
-	       	delayedoff_time, time_end);
+	std::vector<Job* > finished_jobs;
+	finished_jobs = simulate(mode, arrival, service, n_server, setup_time,
+	       			delayedoff_time, time_end);
 
+
+	// write simulation results to file
+	std::string n_mrt = "mrt_" + std::to_string(seqnum) + ".txt";
+	std::string n_departure = "departure_"+ std::to_string(seqnum) + ".txt";
+	
+	std::ofstream f_mrt(n_mrt);
+	std::ofstream f_departure(n_departure);
+	
+
+	debug_cout( "Write results to file... \n");
+	float sum = 0;
+	for(int i = 0; i < finished_jobs.size(); ++i){
+		f_departure << finished_jobs[i]->get_arrival() << " " 
+			<< finished_jobs[i]->get_departure() << "\n";
+		sum += (finished_jobs[i]->get_departure() - finished_jobs[i]->get_arrival());
+	}
+	f_mrt <<sum / (float)finished_jobs.size() << "\n";
+
+	// close files
+	f_mrt.close();
+	f_departure.close();
 }
