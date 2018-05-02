@@ -1,9 +1,12 @@
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <cmath>
 #include <assert.h>
+#include <iomanip>
+#include <random>
 /*
 reduce power consumption of idling servers, setup/delayedoff mode
 
@@ -65,6 +68,7 @@ public:
 	Job(float t_arrival, float t_service)
 		:mark(false), arrival_time(t_arrival), service_time(t_service), server_id(0)
 	{}
+	~Job(){}
 
 	void marked(){
 		mark = true;
@@ -118,6 +122,7 @@ public:
 			std::cerr << "Undefined Server state\n";
 		}
 	}
+	~Server(){}
 
 	// set server state
 	void set_state(std::string s){
@@ -239,6 +244,9 @@ public:
 			servers.push_back(s);
 		}
 	}
+	~Dispatcher(){}
+
+
 
 	// methods for testing only
 	void set_state(int id, std::string s){
@@ -398,8 +406,19 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 	std::vector<Job*> all_jobs;
 
 	if(mode=="random"){
+		assert(arrival.size()==1);
+		assert(service.size()==1);
 
-	
+		float lambda = arrival[0];
+		float mu = service[0];
+
+		std::random_device rd;
+		std::mt19937 gen(rd());
+
+		std::exponential_distribution<> d(1);
+
+		std::cout << d(gen) << "\n";
+
 	}else if(mode=="trace"){
 		debug_cout("Simulation in trace mode: \n");
 
@@ -430,11 +449,13 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 		debug_cout( "Simulation summary: \n");
 		float sum = 0;
 		for(int i = 0; i < all_jobs.size(); ++i){
-			std::cout << all_jobs[i]->get_arrival() << " " 
+			std::cout <<std::fixed << std::setprecision(3) 
+				<< all_jobs[i]->get_arrival() << " " 
 				<< all_jobs[i]->get_departure() << "\n";
 			sum += (all_jobs[i]->get_departure() - all_jobs[i]->get_arrival());
 		}
-		std::cout << "mrt: "<<sum / (float)all_jobs.size() << "\n";
+		std::cout  <<std::fixed << std::setprecision(3)
+			<< "mrt: "<<sum / (float)all_jobs.size() << "\n";
 
 
 	
@@ -520,11 +541,12 @@ int main(int argc, char *argv[]){
 	debug_cout( "Write results to file... \n");
 	float sum = 0;
 	for(int i = 0; i < finished_jobs.size(); ++i){
-		f_departure << finished_jobs[i]->get_arrival() << " " 
+		f_departure <<std::fixed << std::setprecision(3) 
+			<< finished_jobs[i]->get_arrival() << " " 
 			<< finished_jobs[i]->get_departure() << "\n";
 		sum += (finished_jobs[i]->get_departure() - finished_jobs[i]->get_arrival());
 	}
-	f_mrt <<sum / (float)finished_jobs.size() << "\n";
+	f_mrt << std::fixed << std::setprecision(3) << sum / (float)finished_jobs.size() << "\n";
 
 	// close files
 	f_mrt.close();
