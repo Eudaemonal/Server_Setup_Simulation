@@ -37,6 +37,13 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T> &v){
 	return os;
 }
 
+bool equal_float(float f1, float f2, float step){
+	float epsilon = step/10.0;
+	if(fabs(f1 - f2) < epsilon)
+		return true;
+	return false;
+}
+
 // get the decimal of float
 int decimals_float(float n){
 	std::string s = std::to_string(n);
@@ -104,12 +111,12 @@ private:
 
 class Server{
 public:
-	Server(int id, float t_setup, float t_delay, float clk)
+	Server(int id, float t_setup, float t_delay, float clk, float step)
 		:id(id), state("OFF"), 
 		setup_time(t_setup), setup_counter(-1),
 		delayedoff_time(t_delay), delayedoff_counter(-1),
 		current_job(nullptr), service_counter(-1),
-		m_clock(clk)
+		m_clock(clk), m_step(step)
 	{
 		if(state=="DELAYEDOFF"){
 			priority=1;
@@ -173,7 +180,7 @@ public:
 		if(setup_counter > 0){
 			setup_counter -= step;
 		}
-		if(setup_counter==0){
+		if(equal_float(setup_counter, 0, m_step)){
 			set_state("DELAYEDOFF");
 			delayedoff_counter = delayedoff_time;
 
@@ -184,7 +191,7 @@ public:
 		if(delayedoff_counter > 0){
 			delayedoff_counter -= step;
 		}
-		if(delayedoff_counter==0){
+		if(equal_float(delayedoff_counter, 0, m_step)){
 			set_state("OFF");
 			debug_cout("Server " << id << " off\n");
 		}
@@ -193,7 +200,7 @@ public:
 		if(service_counter > 0){
 			service_counter -= step;
 		}
-		if(service_counter==0){
+		if(equal_float(service_counter, 0, m_step)){
 			set_state("DELAYEDOFF");
 			delayedoff_counter = delayedoff_time;
 
@@ -231,17 +238,17 @@ private:
 
 	// master clock
 	float m_clock;
-
+	float m_step;
 };
 
 
 class Dispatcher{
 public:
-	Dispatcher(int m, float t_setup, float t_delay, float clk)
-		:m_clock(clk)
+	Dispatcher(int m, float t_setup, float t_delay, float clk, float step)
+		:m_clock(clk), m_step(step)
 	{
 		for(int i = 0;i < m; ++i){
-			Server *s = new Server(i+1, t_setup, t_delay, clk);
+			Server *s = new Server(i+1, t_setup, t_delay, clk, step);
 			servers.push_back(s);
 		}
 	}
@@ -397,6 +404,7 @@ private:
 
 	// master clock
 	float m_clock;
+	float m_step;
 };
 
 
@@ -417,20 +425,30 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 		std::random_device rd;
 		std::mt19937 gen(rd());
 
-		std::exponential_distribution<float> d(lambda);
+		// inter-arrival probability distribution
+		std::exponential_distribution<float> d_arrival(lambda);
 
-		std::cout << d(gen) << "\n";
-		
+		// service time probability distribution
+		std::exponential_distribution<float> d_service(mu);
+
+		float sk = 0;
+		for(int i=0; i < 3; ++i){
+			sk += d_service(gen);
+		}
+	
+
+		std::cout << "arrival rate: " << d_arrival(gen) << "\n";
+		std::cout << "service time: " << sk << "\n";
 
 	}else if(mode=="trace"){
 		debug_cout("Simulation in trace mode: \n");
 
 		float m_clock = 0;
-		float step = get_min_step(arrival, service);
-		debug_cout( "Time step: " << step <<"\n");
+		float m_step = get_min_step(arrival, service);
+		debug_cout( "Time step: " << m_step <<"\n");
 
 		// start dispatcher with server
-		Dispatcher dp(m, setup_time, delayedoff_time, m_clock);
+		Dispatcher dp(m, setup_time, delayedoff_time, m_clock, m_step);
 
 		// main loop in execution
 		int j = 0;
@@ -438,7 +456,11 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 			dp.update_clock(m_clock);
 			
 			// job enter system at arrival time
-			if(m_clock==arrival[j]){
+
+			std::cout << arrival[j] << "\n";
+			std::cout << m_clock << "\n";
+			std::cout << (m_clock==arrival[j]) << "\n";
+			if(equal_float(m_clock, arrival[j], m_step)){
 				all_jobs.push_back(dp.job_arrive(arrival[j], service[j]));
 				j++;
 			}
@@ -446,7 +468,7 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 			// process queued job if available
 			dp.process_queue();
 
-			m_clock+=step;
+			m_clock+=m_step;
 		}
 		// simulation finished
 		debug_cout( "Simulation summary: \n");
@@ -459,8 +481,6 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 		}
 		std::cout  <<std::fixed << std::setprecision(3)
 			<< "mrt: "<<sum / (float)all_jobs.size() << "\n";
-
-
 	
 	}else{
 		std::cerr << "unavilable mode\n";
@@ -470,7 +490,7 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 
 
 int main(int argc, char *argv[]){
-	int seqnum = 3;
+	int seqnum = 1;
 
 	std::string n_mode = "mode_" + std::to_string(seqnum) + ".txt";
 	std::string n_para = "para_"+ std::to_string(seqnum) + ".txt";
