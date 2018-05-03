@@ -14,13 +14,14 @@ Dispatcher -> multiple servers
 inter-arrival time and service time are exponential
 M/M/m queue
 */
+
+
 #define DEBUG
 #ifdef DEBUG
 #define debug_cout(x)  std::cout << x
 #else
 #define debug_cout(x)
 #endif 
-
 
 class Job;
 class Server;
@@ -29,9 +30,9 @@ class Dispatcher;
 
 // overload operator for vector
 template <typename T>
-std::ostream& operator<<(std::ostream& os, std::vector<T> v){
-	for(auto it: v)
-		os << it << " ";
+std::ostream& operator<<(std::ostream& os, const std::vector<T> &v){
+	for(size_t i = 0; i < v.size(); ++i)
+		os << v[i] << " ";
 	os << "\n";
 	return os;
 }
@@ -551,4 +552,5 @@ int main(int argc, char *argv[]){
 	// close files
 	f_mrt.close();
 	f_departure.close();
+
 }
