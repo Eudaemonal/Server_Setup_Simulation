@@ -407,6 +407,7 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 	std::vector<Job*> all_jobs;
 
 	if(mode=="random"){
+		debug_cout("Simulation in random mode: \n");
 		assert(arrival.size()==1);
 		assert(service.size()==1);
 
@@ -416,9 +417,10 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 		std::random_device rd;
 		std::mt19937 gen(rd());
 
-		std::exponential_distribution<> d(1);
+		std::exponential_distribution<float> d(lambda);
 
 		std::cout << d(gen) << "\n";
+		
 
 	}else if(mode=="trace"){
 		debug_cout("Simulation in trace mode: \n");
@@ -468,7 +470,7 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 
 
 int main(int argc, char *argv[]){
-	int seqnum = 1;
+	int seqnum = 3;
 
 	std::string n_mode = "mode_" + std::to_string(seqnum) + ".txt";
 	std::string n_para = "para_"+ std::to_string(seqnum) + ".txt";
