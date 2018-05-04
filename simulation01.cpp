@@ -286,33 +286,48 @@ public:
 		std::cout << "\n";
 
 		// operations depend on server state
-		if(servers[0]->state=="DELAYEDOFF"){
+		assign_job_to_servers(0, servers, job);
+
+		return job;
+	}
+
+	// assign job to servers according to priority
+	void assign_job_to_servers(int id, std::vector<Server*> &servers, Job* job){
+		assert(id < servers.size());
+		if(servers[id]->state=="DELAYEDOFF"){
 			Job* job_assign = nullptr;
 			int job_assign_id = -1;
 			for(int i = 0; i < queue.size(); ++i){
-				if(queue[i]->server_id==servers[0]->id){
+				if(queue[i]->server_id==servers[id]->id){
 					job_assign = queue[i];
 					job_assign_id = i;
 				}
 			}
 			if(job_assign!=nullptr && job_assign_id != -1){
-				servers[0]->process_job(job_assign);
+				servers[id]->process_job(job_assign);
 				queue.erase(queue.begin() + job_assign_id);
-				queue.push_back(job);
+				//queue.push_back(job);
+				assign_job_to_servers(id+1, servers, job);
+
+				debug_cout( "Server " << servers[id]->id << " process job "
+					<< "(" <<job_assign->arrival_time << ", "<< job_assign->service_time
+					<< ", " <<job_assign->mark<< ", sid: " << job_assign->server_id <<")\n");
 			}else{
-				servers[0]->process_job(job);
+				servers[id]->process_job(job);
+				debug_cout( "Server " << servers[id]->id << " process job "
+					<< "(" <<job->arrival_time << ", "<< job->service_time
+					<< ", " <<job->mark<< ", sid: " << job->server_id <<")\n");
 			}
 
-		}else if(servers[0]->state=="OFF"){
-			servers[0]->poweron();
+		}else if(servers[id]->state=="OFF"){
+			servers[id]->poweron();
 			job->marked();
-			job->server_id = servers[0]->id;
+			job->server_id = servers[id]->id;
 			queue.push_back(job);
-		}else if(servers[0]->state=="SETUP" || servers[0]->state=="BUSY"){
+		}else if(servers[id]->state=="SETUP" || servers[id]->state=="BUSY"){
 			queue.push_back(job);
 		}
-		
-		return job;
+
 	}
 
 	// process job in queue
@@ -354,7 +369,8 @@ public:
 					if(queue[i]->mark==false)
 						break;
 				}
-				if(i!=queue.size()-1){
+				// unmarked job found
+				if(i!=queue.size()){
 					job = queue[i];
 					servers[0]->process_job(job);
 					queue.erase(queue.begin() + i);
@@ -362,7 +378,9 @@ public:
 					debug_cout( "Server " << servers[0]->id << " process job "
 					<< "(" <<job->arrival_time << ", "<< job->service_time
 					<< ", " <<job->mark<< ", sid: " << job->server_id <<")\n");
-				}else{
+				}
+				// no other unmarked job found 
+				else{
 					for(int i=0; i < servers.size(); ++i){
 						if(servers[i]->id == job->server_id){
 							assert(servers[i]->state=="SETUP");
@@ -461,10 +479,16 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 
 			r_arrival.push_back(at);
 			r_service.push_back(st);
-
-			std::cout << "at: " << at << "   st: "<< st << "\n";
-
 		}
+
+		std::cout << "arrival time: \n";
+		for(auto it: r_arrival)
+			std::cout << it << "\n";
+		std::cout << "service time: \n";
+		for(auto it: r_service)
+			std::cout << it << "\n";
+		std::cout << "\n";
+
 		float m_clock = 0;
 		clock_v.push_back(0.0);
 		for(int i = 0; i < r_arrival.size(); ++i){
@@ -559,7 +583,7 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 
 
 int main(int argc, char *argv[]){
-	int seqnum = 4;
+	int seqnum = 6;
 
 	std::string n_mode = "mode_" + std::to_string(seqnum) + ".txt";
 	std::string n_para = "para_"+ std::to_string(seqnum) + ".txt";
