@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <iomanip>
 #include <random>
+#include "simulation.hpp"
 /*
 reduce power consumption of idling servers, setup/delayedoff mode
 
@@ -16,37 +17,11 @@ M/M/m queue
 */
 
 
-/*
-problem: float percision, unable to start job after finish
-
-accumulate float error during time addition
-
-*/
-
-#define DEBUG
-#ifdef DEBUG
-#define debug_cout(x)  std::cout << x
-#else
-#define debug_cout(x)
-#endif 
-
-class Job;
-class Server;
-class Dispatcher;
-
-
 // global vector for critical time point
 static std::vector<float> clock_v;
 
 
-// overload operator for vector
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const std::vector<T> &v){
-	for(size_t i = 0; i < v.size(); ++i)
-		os << v[i] << " ";
-	os << "\n";
-	return os;
-}
+
 
 bool equal_float(float f1, float f2){
 	float epsilon = 0.01;
@@ -80,44 +55,6 @@ float get_min_step(std::vector<float> arrival, std::vector<float> service){
 	return std::pow(0.1, m_decimal);
 }
 
-
-
-class Job{
-public:
-	Job(float t_arrival, float t_service)
-		:mark(false), arrival_time(t_arrival), service_time(t_service), server_id(0)
-	{}
-	~Job(){}
-
-	void marked(){
-		mark = true;
-	}
-
-	void unmarked(){
-		mark = false;
-	}
-
-
-	float get_arrival(){
-		return arrival_time;
-	}
-
-	float get_departure(){
-		return departure_time;
-	}
-
-	friend class Server;
-	friend class Dispatcher;
-private:
-	// true: MARKED, false: UNMARKED (default)
-	bool mark;
-	float arrival_time;
-	float service_time;
-	float departure_time;
-
-	// assigned server id for setup
-	int server_id;
-};
 
 
 class Server{
@@ -281,9 +218,9 @@ public:
 
 		// test only
 		for(int i=0; i < servers.size(); ++i){
-			std::cout << servers[i]->id << " ";
+			debug_cout(servers[i]->id << " ");
 		}
-		std::cout << "\n";
+		debug_cout("\n");
 
 		// operations depend on server state
 		assign_job_to_servers(0, servers, job);
@@ -482,13 +419,13 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 			r_service.push_back(st);
 		}
 
-		std::cout << "arrival time: \n";
+		debug_cout( "arrival time: \n");
 		for(auto it: r_arrival)
-			std::cout << it << "\n";
-		std::cout << "service time: \n";
+			debug_cout(it << "\n") ;
+		debug_cout( "service time: \n");
 		for(auto it: r_service)
-			std::cout << it << "\n";
-		std::cout << "\n";
+			debug_cout(it << "\n") ;
+		debug_cout("\n") ;
 
 		float m_clock = 0;
 		clock_v.push_back(0.0);
@@ -524,13 +461,13 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 		debug_cout( "Simulation summary: \n");
 		float sum = 0;
 		for(int i = 0; i < all_jobs.size(); ++i){
-			std::cout <<std::fixed << std::setprecision(3) 
+			debug_cout(std::fixed << std::setprecision(3) 
 				<< all_jobs[i]->get_arrival() << " " 
-				<< all_jobs[i]->get_departure() << "\n";
+				<< all_jobs[i]->get_departure() << "\n");
 			sum += (all_jobs[i]->get_departure() - all_jobs[i]->get_arrival());
 		}
-		std::cout  <<std::fixed << std::setprecision(3)
-			<< "mrt: "<<sum / (float)all_jobs.size() << "\n";
+		debug_cout(std::fixed << std::setprecision(3)
+			<< "mrt: "<<sum / (float)all_jobs.size() << "\n");
 
 	}else if(mode=="trace"){
 		debug_cout("Simulation in trace mode: \n");
@@ -568,13 +505,13 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 		debug_cout( "Simulation summary: \n");
 		float sum = 0;
 		for(int i = 0; i < all_jobs.size(); ++i){
-			std::cout <<std::fixed << std::setprecision(3) 
+			debug_cout(std::fixed << std::setprecision(3) 
 				<< all_jobs[i]->get_arrival() << " " 
-				<< all_jobs[i]->get_departure() << "\n";
+				<< all_jobs[i]->get_departure() << "\n");
 			sum += (all_jobs[i]->get_departure() - all_jobs[i]->get_arrival());
 		}
-		std::cout  <<std::fixed << std::setprecision(3)
-			<< "mrt: "<<sum / (float)all_jobs.size() << "\n";
+		debug_cout(std::fixed << std::setprecision(3)
+			<< "mrt: "<<sum / (float)all_jobs.size() << "\n");
 	
 	}else{
 		std::cerr << "unavilable mode\n";
@@ -582,98 +519,3 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 	return all_jobs;
 }
 
-/*
-Useage: 
-make
-./simulation seqnum
-
-*/
-
-int main(int argc, char *argv[]){
-	assert(argc==2);
-	int seqnum = atoi(argv[1]);
-
-	std::string n_mode = "mode_" + std::to_string(seqnum) + ".txt";
-	std::string n_para = "para_"+ std::to_string(seqnum) + ".txt";
-	std::string n_arrival = "arrival_"+ std::to_string(seqnum) + ".txt";
-	std::string n_service = "service_"+ std::to_string(seqnum) + ".txt";
-	
-	// setup files to read
-	std::ifstream f_mode(n_mode);
-	std::ifstream f_para(n_para);
-	std::ifstream f_arrival(n_arrival);
-	std::ifstream f_service(n_service);
-
-	// setup containers for arguments
-	std::string mode;
-
-	int n_server;
-	float setup_time;
-	float delayedoff_time;
-
-	std::vector<float> arrival;
-
-	std::vector<float> service;
-
-	float time_end;
-
-	// read arguments from files
-	f_mode >> mode;
-	
-	f_para >> n_server;
-	f_para >> setup_time;
-	f_para >> delayedoff_time;
-
-	float a;
-	while(f_arrival >> a){
-		arrival.push_back(a);
-	}
-	
-	while(f_service >> a){
-		service.push_back(a);
-	}
-
-	time_end = 10; // only relevent in random mode
-
-	// close files
-	f_mode.close();
-	f_para.close();
-	f_arrival.close();
-	f_service.close();
-	
-	// check arguemnt value
-	debug_cout( "Mode: " << mode << "\n");
-	debug_cout( "N server: " << n_server << "\n");
-	debug_cout( "setup: " << setup_time << "\n");
-	debug_cout( "delayed off: " << delayedoff_time << "\n");
-	debug_cout( "arrival: "<< arrival);
-	debug_cout( "service: " << service);
-
-	std::vector<Job* > finished_jobs;
-	finished_jobs = simulate(mode, arrival, service, n_server, setup_time,
-	       			delayedoff_time, time_end);
-
-
-	// write simulation results to file
-	std::string n_mrt = "mrt_" + std::to_string(seqnum) + ".txt";
-	std::string n_departure = "departure_"+ std::to_string(seqnum) + ".txt";
-	
-	std::ofstream f_mrt(n_mrt);
-	std::ofstream f_departure(n_departure);
-	
-
-	debug_cout( "Write results to file... \n");
-	float sum = 0;
-	for(int i = 0; i < finished_jobs.size(); ++i){
-		f_departure <<std::fixed << std::setprecision(3) 
-			<< finished_jobs[i]->get_arrival() << " " 
-			<< finished_jobs[i]->get_departure() << "\n";
-		sum += (finished_jobs[i]->get_departure() - finished_jobs[i]->get_arrival());
-	}
-	f_mrt << std::fixed << std::setprecision(3) << sum / (float)finished_jobs.size() << "\n";
-
-	// close files
-	f_mrt.close();
-	f_departure.close();
-
-}
