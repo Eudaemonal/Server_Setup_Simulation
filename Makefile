@@ -1,2 +1,3 @@
 all:
-	g++ -std=c++14 -pthread simulation01.cpp -o simulation01
+	g++ -std=c++14 simulation.cpp -o simulation
+	g++ -std=c++14 wrapper.cpp -o wrapper

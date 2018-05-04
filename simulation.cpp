@@ -16,6 +16,13 @@ M/M/m queue
 */
 
 
+/*
+problem: float percision, unable to start job after finish
+
+accumulate float error during time addition
+
+*/
+
 #define DEBUG
 #ifdef DEBUG
 #define debug_cout(x)  std::cout << x
@@ -28,6 +35,10 @@ class Server;
 class Dispatcher;
 
 
+// global vector for critical time point
+static std::vector<float> clock_v;
+
+
 // overload operator for vector
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T> &v){
@@ -37,8 +48,8 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T> &v){
 	return os;
 }
 
-bool equal_float(float f1, float f2, float step){
-	float epsilon = step/10.0;
+bool equal_float(float f1, float f2){
+	float epsilon = 0.01;
 	if(fabs(f1 - f2) < epsilon)
 		return true;
 	return false;
@@ -111,12 +122,12 @@ private:
 
 class Server{
 public:
-	Server(int id, float t_setup, float t_delay, float clk, float step)
+	Server(int id, float t_setup, float t_delay, float clk)
 		:id(id), state("OFF"), 
-		setup_time(t_setup), setup_counter(-1),
-		delayedoff_time(t_delay), delayedoff_counter(-1),
-		current_job(nullptr), service_counter(-1),
-		m_clock(clk), m_step(step)
+		setup_time(t_setup), setup_exp(-1),
+		delayedoff_time(t_delay), delayedoff_exp(-1),
+		current_job(nullptr), service_exp(-1),
+		m_clock(clk)
 	{
 		if(state=="DELAYEDOFF"){
 			priority=1;
@@ -137,22 +148,22 @@ public:
 		state = s;
 		if(s=="DELAYEDOFF"){
 			priority=1;
-			setup_counter = -1;
-			service_counter = -1;
+			setup_exp = -1;
+			service_exp = -1;
 		}else if(s=="OFF"){
 			priority=2;
-			setup_counter = -1;
-			delayedoff_counter = -1;
-			service_counter = -1;
+			setup_exp = -1;
+			delayedoff_exp = -1;
+			service_exp = -1;
 		}else if(s=="SETUP"){
 			priority=3;
-			delayedoff_counter = -1;
-			service_counter = -1;
+			delayedoff_exp = -1;
+			service_exp = -1;
 
 		}else if(s=="BUSY"){
 			priority=4;
-			setup_counter = -1;
-			delayedoff_counter = -1;
+			setup_exp = -1;
+			delayedoff_exp = -1;
 		}else{
 			std::cerr << "Undefined Server state\n";
 		}
@@ -162,55 +173,48 @@ public:
 	void poweron(){
 		debug_cout( "Server "<< id << " poweron\n");
 		set_state("SETUP");
-		setup_counter = setup_time;
+		setup_exp = m_clock + setup_time;
+
+		clock_v.push_back(setup_exp); // global
 	}
 
 	
 	void process_job(Job* job){
 		current_job = job;
-		service_counter = job->service_time;
+		service_exp = m_clock + job->service_time;
+		clock_v.push_back(service_exp); // global
 		set_state("BUSY");
 	}
 
 
 	// update master clock and server state
 	void update_clock(float clk){
-		float step = clk - m_clock;
 		// setup operation
-		if(setup_counter > 0){
-			setup_counter -= step;
-		}
-		if(equal_float(setup_counter, 0, m_step)){
+		if(equal_float(setup_exp, clk)){
 			set_state("DELAYEDOFF");
-			delayedoff_counter = delayedoff_time;
-
+			delayedoff_exp = clk + delayedoff_time;
+			clock_v.push_back(delayedoff_exp); // gloal
 			debug_cout("Server " << id << " starts, delayedoff\n");
 		}
 				
 		// delayoff operation
-		if(delayedoff_counter > 0){
-			delayedoff_counter -= step;
-		}
-		if(equal_float(delayedoff_counter, 0, m_step)){
+		if(equal_float(delayedoff_exp, clk)){
 			set_state("OFF");
 			debug_cout("Server " << id << " off\n");
 		}
 
 		// busy operation
-		if(service_counter > 0){
-			service_counter -= step;
-		}
-		if(equal_float(service_counter, 0, m_step)){
+		if(equal_float(service_exp, clk)){
 			set_state("DELAYEDOFF");
-			delayedoff_counter = delayedoff_time;
+			delayedoff_exp = clk + delayedoff_time;
+			clock_v.push_back(delayedoff_exp); // gloal
 
 			current_job->departure_time = clk;
 
 			debug_cout("Server " << id << " job finish, delayedoff\n");
 		}
 
-		debug_cout("Server " << id << " " << state << " sc: " << setup_counter 
-				<< " dc: " << delayedoff_counter << "\n");
+		debug_cout("Server " << id << " " << state << "\n");
 
 
 		m_clock = clk;
@@ -228,27 +232,26 @@ private:
 
 	
 	const float setup_time;
-	float setup_counter;
+	float setup_exp;
 
 	const float delayedoff_time;
-	float delayedoff_counter;
+	float delayedoff_exp;
 
 	Job* current_job;
-	float service_counter;
+	float service_exp;
 
 	// master clock
 	float m_clock;
-	float m_step;
 };
 
 
 class Dispatcher{
 public:
-	Dispatcher(int m, float t_setup, float t_delay, float clk, float step)
-		:m_clock(clk), m_step(step)
+	Dispatcher(int m, float t_setup, float t_delay, float clk)
+		:m_clock(clk)
 	{
 		for(int i = 0;i < m; ++i){
-			Server *s = new Server(i+1, t_setup, t_delay, clk, step);
+			Server *s = new Server(i+1, t_setup, t_delay, clk);
 			servers.push_back(s);
 		}
 	}
@@ -261,12 +264,6 @@ public:
 		servers[id-1]->set_state(s);
 	}
 
-	void set_delayedoff_counter(int id, float c){
-		servers[id-1]->delayedoff_counter = c;
-	}
-
-
-	
 
 	// dispatch jobs on arrival
 	Job* job_arrive(float t_arrival, float t_service){
@@ -278,7 +275,7 @@ public:
 			if(!(a->state=="DELAYEDOFF" && b->state=="DELAYEDOFF")){
 				return a->priority < b->priority;
 			}
-			return a->delayedoff_counter > b->delayedoff_counter;
+			return a->delayedoff_exp > b->delayedoff_exp;
 		};
 		std::sort(servers.begin(), servers.end(), compare);	
 
@@ -289,20 +286,48 @@ public:
 		std::cout << "\n";
 
 		// operations depend on server state
-		if(servers[0]->state=="DELAYEDOFF"){
-			servers[0]->process_job(job);
+		assign_job_to_servers(0, servers, job);
 
-		}else if(servers[0]->state=="OFF"){
-			servers[0]->poweron();
+		return job;
+	}
+
+	// assign job to servers according to priority
+	void assign_job_to_servers(int id, std::vector<Server*> &servers, Job* job){
+		assert(id < servers.size());
+		if(servers[id]->state=="DELAYEDOFF"){
+			Job* job_assign = nullptr;
+			int job_assign_id = -1;
+			for(int i = 0; i < queue.size(); ++i){
+				if(queue[i]->server_id==servers[id]->id){
+					job_assign = queue[i];
+					job_assign_id = i;
+				}
+			}
+			if(job_assign!=nullptr && job_assign_id != -1){
+				servers[id]->process_job(job_assign);
+				queue.erase(queue.begin() + job_assign_id);
+				//queue.push_back(job);
+				assign_job_to_servers(id+1, servers, job);
+
+				debug_cout( "Server " << servers[id]->id << " process job "
+					<< "(" <<job_assign->arrival_time << ", "<< job_assign->service_time
+					<< ", " <<job_assign->mark<< ", sid: " << job_assign->server_id <<")\n");
+			}else{
+				servers[id]->process_job(job);
+				debug_cout( "Server " << servers[id]->id << " process job "
+					<< "(" <<job->arrival_time << ", "<< job->service_time
+					<< ", " <<job->mark<< ", sid: " << job->server_id <<")\n");
+			}
+
+		}else if(servers[id]->state=="OFF"){
+			servers[id]->poweron();
 			job->marked();
-			job->server_id = servers[0]->id;
+			job->server_id = servers[id]->id;
 			queue.push_back(job);
-		}else if(servers[0]->state=="SETUP" || servers[0]->state=="BUSY"){
+		}else if(servers[id]->state=="SETUP" || servers[id]->state=="BUSY"){
 			queue.push_back(job);
 		}
 
-		
-		return job;
 	}
 
 	// process job in queue
@@ -316,7 +341,7 @@ public:
 			if(!(a->state=="DELAYEDOFF" && b->state=="DELAYEDOFF")){
 				return a->priority < b->priority;
 			}
-			return a->delayedoff_counter > b->delayedoff_counter;
+			return a->delayedoff_exp > b->delayedoff_exp;
 		};
 		std::sort(servers.begin(), servers.end(), compare);
 	
@@ -324,6 +349,11 @@ public:
 		if(job->mark==0 && servers[0]->state=="DELAYEDOFF"){
 			servers[0]->process_job(job);
 			queue.erase (queue.begin());
+
+			debug_cout( "Server " << servers[0]->id << " process job "
+					<< "(" <<job->arrival_time << ", "<< job->service_time
+					<< ", " <<job->mark<< ", sid: " << job->server_id <<")\n");
+
 		}else if(job->mark==1 && servers[0]->state=="DELAYEDOFF"){
 			if(job->server_id==servers[0]->id){
 				servers[0]->process_job(job);
@@ -339,15 +369,19 @@ public:
 					if(queue[i]->mark==false)
 						break;
 				}
-				if(i!=queue.size()-1){
-					job = queue[i];
+				// unmarked job found
+				if(i!=queue.size()){
 					servers[0]->process_job(job);
-					queue.erase(queue.begin() + i);
+					queue.erase(queue.begin());
+					queue[i]->marked();
+					
 					
 					debug_cout( "Server " << servers[0]->id << " process job "
 					<< "(" <<job->arrival_time << ", "<< job->service_time
 					<< ", " <<job->mark<< ", sid: " << job->server_id <<")\n");
-				}else{
+				}
+				// no other unmarked job found 
+				else{
 					for(int i=0; i < servers.size(); ++i){
 						if(servers[i]->id == job->server_id){
 							assert(servers[i]->state=="SETUP");
@@ -363,8 +397,6 @@ public:
 					debug_cout( "Server " << servers[0]->id << " process job "
 					<< "(" <<job->arrival_time << ", "<< job->service_time
 					<< ", " <<job->mark<< ", sid: " << job->server_id <<")\n");
-
-										
 				}
 			}
 		}
@@ -404,7 +436,6 @@ private:
 
 	// master clock
 	float m_clock;
-	float m_step;
 };
 
 
@@ -449,35 +480,45 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 
 			r_arrival.push_back(at);
 			r_service.push_back(st);
-
-			std::cout << "at: " << at << "   st: "<< st << "\n";
-
 		}
-		
-		// start simulation
-		float m_clock = 0;
-		float m_step = 0.1; //get_min_step(r_arrival, r_service);
-		debug_cout( "Time step: " << m_step <<"\n");
 
-	
+		std::cout << "arrival time: \n";
+		for(auto it: r_arrival)
+			std::cout << it << "\n";
+		std::cout << "service time: \n";
+		for(auto it: r_service)
+			std::cout << it << "\n";
+		std::cout << "\n";
+
+		float m_clock = 0;
+		clock_v.push_back(0.0);
+		for(int i = 0; i < r_arrival.size(); ++i){
+			clock_v.push_back(r_arrival[i]);
+		}
+
 		// start dispatcher with server
-		Dispatcher dp(m, setup_time, delayedoff_time, m_clock, m_step);
+		Dispatcher dp(m, setup_time, delayedoff_time, m_clock);
+
 
 		// main loop in execution
+		int i = 0;
 		int j = 0;
-		while(!dp.terminate(r_arrival.back())){
+		while(i < clock_v.size()){
 			dp.update_clock(m_clock);
 			
+			std::sort(clock_v.begin(), clock_v.end());
+
 			// job enter system at arrival time
-			if(equal_float(m_clock, r_arrival[j], m_step)){
+			if(m_clock == r_arrival[j]){
 				all_jobs.push_back(dp.job_arrive(r_arrival[j], r_service[j]));
 				j++;
 			}
-
 			// process queued job if available
 			dp.process_queue();
+			std::sort(clock_v.begin(), clock_v.end());
 
-			m_clock+=m_step;
+			i++;
+			m_clock = clock_v[i];
 		}
 		// simulation finished
 		debug_cout( "Simulation summary: \n");
@@ -490,34 +531,38 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 		}
 		std::cout  <<std::fixed << std::setprecision(3)
 			<< "mrt: "<<sum / (float)all_jobs.size() << "\n";
-	
-
 
 	}else if(mode=="trace"){
 		debug_cout("Simulation in trace mode: \n");
-
 		float m_clock = 0;
-		float m_step = get_min_step(arrival, service);
-		debug_cout( "Time step: " << m_step <<"\n");
+		clock_v.push_back(0.0);
+		for(int i = 0; i < arrival.size(); ++i){
+			clock_v.push_back(arrival[i]);
+		}
 
 		// start dispatcher with server
-		Dispatcher dp(m, setup_time, delayedoff_time, m_clock, m_step);
+		Dispatcher dp(m, setup_time, delayedoff_time, m_clock);
+
 
 		// main loop in execution
+		int i = 0;
 		int j = 0;
-		while(!dp.terminate(arrival.back())){
+		while(i < clock_v.size()){
 			dp.update_clock(m_clock);
 			
+			std::sort(clock_v.begin(), clock_v.end());
+			clock_v.erase( std::unique(clock_v.begin(), clock_v.end() ), clock_v.end());
 			// job enter system at arrival time
-			if(equal_float(m_clock, arrival[j], m_step)){
+			if(m_clock == arrival[j]){
 				all_jobs.push_back(dp.job_arrive(arrival[j], service[j]));
 				j++;
 			}
-
 			// process queued job if available
 			dp.process_queue();
-
-			m_clock+=m_step;
+			std::sort(clock_v.begin(), clock_v.end());
+			clock_v.erase( std::unique(clock_v.begin(), clock_v.end() ), clock_v.end());
+			i++;
+			m_clock = clock_v[i];
 		}
 		// simulation finished
 		debug_cout( "Simulation summary: \n");
@@ -537,9 +582,16 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 	return all_jobs;
 }
 
+/*
+Useage: 
+make
+./simulation seqnum
+
+*/
 
 int main(int argc, char *argv[]){
-	int seqnum = 3;
+	assert(argc==2);
+	int seqnum = atoi(argv[1]);
 
 	std::string n_mode = "mode_" + std::to_string(seqnum) + ".txt";
 	std::string n_para = "para_"+ std::to_string(seqnum) + ".txt";
