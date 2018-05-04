@@ -371,9 +371,10 @@ public:
 				}
 				// unmarked job found
 				if(i!=queue.size()){
-					job = queue[i];
 					servers[0]->process_job(job);
-					queue.erase(queue.begin() + i);
+					queue.erase(queue.begin());
+					queue[i]->marked();
+					
 					
 					debug_cout( "Server " << servers[0]->id << " process job "
 					<< "(" <<job->arrival_time << ", "<< job->service_time
@@ -581,9 +582,16 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 	return all_jobs;
 }
 
+/*
+Useage: 
+make
+./simulation seqnum
+
+*/
 
 int main(int argc, char *argv[]){
-	int seqnum = 6;
+	assert(argc==2);
+	int seqnum = atoi(argv[1]);
 
 	std::string n_mode = "mode_" + std::to_string(seqnum) + ".txt";
 	std::string n_para = "para_"+ std::to_string(seqnum) + ".txt";
