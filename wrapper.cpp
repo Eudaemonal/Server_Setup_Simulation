@@ -55,7 +55,6 @@ void run(int seqnum){
 		service.push_back(a);
 	}
 
-
 	// close files
 	f_mode.close();
 	f_para.close();
@@ -70,6 +69,7 @@ void run(int seqnum){
 	debug_cout( "arrival: "<< arrival);
 	debug_cout( "service: " << service);
 
+	// run simulation function, results store in finished_jobs
 	std::vector<Job* > finished_jobs;
 	finished_jobs = simulate(mode, arrival, service, n_server, setup_time,
 	       			delayedoff_time, time_end);
@@ -82,7 +82,6 @@ void run(int seqnum){
 	std::ofstream f_mrt(n_mrt);
 	std::ofstream f_departure(n_departure);
 	
-
 	debug_cout( "Write results to file... \n");
 	float sum = 0;
 	for(int i = 0; i < finished_jobs.size(); ++i){

@@ -17,11 +17,9 @@ M/M/m queue
 */
 
 
-// global vector for critical time point
+
+
 static std::vector<float> clock_v;
-
-
-
 
 bool equal_float(float f1, float f2){
 	float epsilon = 0.01;
@@ -380,6 +378,10 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 	       	int m, float setup_time,
 	       	float delayedoff_time, float time_end)
 {
+	// global vector for critical time point
+
+	clock_v.clear();
+
 	std::vector<Job*> all_jobs;
 
 	if(mode=="random"){
