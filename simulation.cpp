@@ -18,7 +18,7 @@ M/M/m queue
 
 
 
-
+// global vector for critical time point
 static std::vector<float> clock_v;
 
 bool equal_float(float f1, float f2){
@@ -35,24 +35,6 @@ int decimals_float(float n){
 	std::string t = s.substr(s.find(".")+1);
 	return t.length();
 }
-
-// get the minimal time resolution step
-float get_min_step(std::vector<float> arrival, std::vector<float> service){
-	int m_decimal = 0;
-	int d;
-	for(int i = 0; i < arrival.size(); ++i){
-		d = decimals_float(arrival[i]);
-		if(d > m_decimal)
-			m_decimal =d;
-	}
-	for(int i = 0; i < service.size(); ++i){
-		d = decimals_float(service[i]);
-		if(d > m_decimal)
-			m_decimal =d;
-	}
-	return std::pow(0.1, m_decimal);
-}
-
 
 
 class Server{
@@ -319,10 +301,11 @@ public:
 				else{
 					for(int i=0; i < servers.size(); ++i){
 						if(servers[i]->id == job->server_id){
-							assert(servers[i]->state=="SETUP");
-							servers[i]->set_state("OFF");
-							debug_cout( "Turn off setup server "
+							if(servers[i]->state=="SETUP"){
+								servers[i]->set_state("OFF");
+								debug_cout( "Turn off setup server "
 								       	<< servers[i]->id << "\n");
+							}
 						}
 					}
 
@@ -378,7 +361,6 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 	       	int m, float setup_time,
 	       	float delayedoff_time, float time_end)
 {
-	// global vector for critical time point
 
 	clock_v.clear();
 
