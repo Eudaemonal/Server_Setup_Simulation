@@ -12,6 +12,8 @@ make
 */
 
 void run(int seqnum){
+	bool reproducible = true;
+
 	std::string n_mode = "mode_" + std::to_string(seqnum) + ".txt";
 	std::string n_para = "para_"+ std::to_string(seqnum) + ".txt";
 	std::string n_arrival = "arrival_"+ std::to_string(seqnum) + ".txt";
@@ -72,7 +74,7 @@ void run(int seqnum){
 	// run simulation function, results store in finished_jobs
 	std::vector<Job* > finished_jobs;
 	finished_jobs = simulate(mode, arrival, service, n_server, setup_time,
-	       			delayedoff_time, time_end);
+	       			delayedoff_time, time_end, true);
 
 
 	// write simulation results to file

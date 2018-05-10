@@ -20,6 +20,7 @@ float run(int seqnum, float d_time){
 	float setup_time;
 	float delayedoff_time;
 	float time_end;
+	bool reproducible = false;
 
 	std::vector<float> arrival;
 	std::vector<float> service;
@@ -30,7 +31,7 @@ float run(int seqnum, float d_time){
 	n_server = 5;
 	setup_time = 5;
 	delayedoff_time = d_time;
-	time_end = 10;
+	time_end = 500;
 
 	arrival.push_back(0.35);
 	service.push_back(1);
@@ -46,7 +47,7 @@ float run(int seqnum, float d_time){
 	// run simulation function, results store in finished_jobs
 	std::vector<Job* > finished_jobs;
 	finished_jobs = simulate(mode, arrival, service, n_server, setup_time,
-	       			delayedoff_time, time_end);
+	       			delayedoff_time, time_end, reproducible);
 
 	float sum = 0;
 	for(int i = 0; i < finished_jobs.size(); ++i){
@@ -59,10 +60,10 @@ float run(int seqnum, float d_time){
 
 int main(int argc, char *argv[]){
 	// each Tc value will run n_test times
-	int n_test = 5000;
-	int n_case = 20;
+	int n_test = 50;
+	int n_case = 30;
 	float mrt;
-	// all test of Tc
+	// all test cases of Tc
 	std::vector<float> tcv(n_case);
 	for(int i=0; i < tcv.size(); ++i){
 		tcv[i] = 0.1 * pow(2, i);
