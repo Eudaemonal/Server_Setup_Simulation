@@ -1,11 +1,12 @@
-#include <OpenGL/gl.h>
-#include <OpenGL/glu.h>
-#include <GLUT/glut.h>
+#include <GL/gl.h>
+#include <GL/glu.h>
+#include <GL/glut.h>
 
 #include <iostream>
 
 /* Compile: g++ -framework OpenGL GLUT ogl_test.cpp -o ogl_test
- * 
+ 
+g++ ogl_test.cpp -o ogl_test -lGLU -lGL -lglut 
  * */
 
 using namespace std;
