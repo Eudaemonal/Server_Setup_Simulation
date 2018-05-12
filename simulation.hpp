@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 
-//#define DEBUG
+#define DEBUG
 #ifdef DEBUG
 #define debug_cout(x)  std::cout << x
 #else

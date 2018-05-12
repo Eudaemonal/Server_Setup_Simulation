@@ -405,6 +405,7 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 
 	if(mode=="random"){
 		debug_cout("Simulation in random mode: \n");
+
 		assert(arrival.size()==1);
 		assert(service.size()==1);
 
@@ -461,9 +462,7 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 
 		}
 
-
-
-
+		#ifdef DEBUG
 		debug_cout( "arrival time: \n");
 		for(auto it: r_arrival)
 			debug_cout(it << "\n") ;
@@ -471,6 +470,7 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 		for(auto it: r_service)
 			debug_cout(it << "\n") ;
 		debug_cout("\n") ;
+		#endif
 
 		float m_clock = 0;
 		clock_v.push_back(0.0);
@@ -503,8 +503,10 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 			m_clock = clock_v[i];
 		}
 		// simulation finished
+		
 		debug_cout( "Simulation summary: \n");
 		float sum = 0;
+		#ifdef DEBUG
 		for(int i = 0; i < all_jobs.size(); ++i){
 			debug_cout(std::fixed << std::setprecision(3) 
 				<< all_jobs[i]->get_arrival() << " " 
@@ -513,6 +515,7 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 		}
 		debug_cout(std::fixed << std::setprecision(3)
 			<< "mrt: "<<sum / (float)all_jobs.size() << "\n");
+		#endif
 
 	}else if(mode=="trace"){
 		debug_cout("Simulation in trace mode: \n");

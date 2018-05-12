@@ -20,7 +20,7 @@ float run(int seqnum, float d_time){
 	float setup_time;
 	float delayedoff_time;
 	float time_end;
-	bool reproducible = false;
+	bool reproducible = true;
 
 	std::vector<float> arrival;
 	std::vector<float> service;
@@ -31,7 +31,7 @@ float run(int seqnum, float d_time){
 	n_server = 5;
 	setup_time = 5;
 	delayedoff_time = d_time;
-	time_end = 500;
+	time_end = 10;
 
 	arrival.push_back(0.35);
 	service.push_back(1);

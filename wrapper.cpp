@@ -84,6 +84,8 @@ void run(int seqnum){
 	std::ofstream f_mrt(n_mrt);
 	std::ofstream f_departure(n_departure);
 	
+
+
 	debug_cout( "Write results to file... \n");
 	float sum = 0;
 	for(int i = 0; i < finished_jobs.size(); ++i){
