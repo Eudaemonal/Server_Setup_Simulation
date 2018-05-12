@@ -421,7 +421,9 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 			Random rd(1);
 			float at = 0;
 			float st = 0;
-			while(at < time_end){
+			float exp_et = 0;
+			float sst = 0;
+			while(exp_et < time_end){
 				st = 0;
 				for(int i=0; i < 3; ++i){
 					st+=rd.exponential(mu);
@@ -431,9 +433,14 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 				st = roundf(st * 10) / 10;
 				at = roundf(at * 10) / 10;
 
+				sst += st;
 				r_arrival.push_back(at);
 				r_service.push_back(st);
+
+				exp_et = at + setup_time + sst;
 			}
+			r_arrival.pop_back();
+			r_service.pop_back();
 
 		}else{
 			debug_cout("random unreproducible\n");
@@ -447,7 +454,9 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 			std::exponential_distribution<float> d_service(mu);
 			float at = 0;
 			float st = 0;
-			while(at < time_end){
+			float exp_et = 0;
+			float sst = 0;
+			while(exp_et < time_end){
 				st = 0;
 				for(int i=0; i < 3; ++i){
 					st += d_service(gen);
@@ -457,9 +466,14 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 				st = roundf(st * 10) / 10;
 				at = roundf(at * 10) / 10;
 
+				sst += st;
+
 				r_arrival.push_back(at);
 				r_service.push_back(st);
+				exp_et = at + setup_time + sst;
 			}
+			r_arrival.pop_back();
+			r_service.pop_back();
 
 		}
 
@@ -502,6 +516,9 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 
 			i++;
 			m_clock = clock_v[i];
+
+			debug_cout("assert master clock " <<  m_clock <<" < " << time_end << "\n");
+			//assert(m_clock < time_end);
 		}
 		// simulation finished
 		

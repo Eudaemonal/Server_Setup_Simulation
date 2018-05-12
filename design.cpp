@@ -56,7 +56,10 @@ float run(int seqnum, float d_time){
 	n_server = 5;
 	setup_time = 5;
 	delayedoff_time = d_time;
-	time_end = 100;
+
+	// directly related to largest Tc
+	// setting a too small value causes no test cases generated
+	time_end = 200;
 
 	arrival.push_back(0.35);
 	service.push_back(1);
@@ -168,12 +171,14 @@ void draw_histogram(int argc, char *argv[]){
 
 
 int main(int argc, char *argv[]){
+	// notice: setting a too large number may cause overflow
 	// each Tc value will run n_test times
-	int n_test = 500;
+	int n_test = 50;
+	// notice: setting a too large number may cause overflow
 	// determines cases of Tc
 	int n_case = 16;
-	float mrt;
 
+	float mrt;
 	for(int i=0; i < n_case; ++i){
 		tcv.push_back(0.1 * pow(2, i));
 	}
