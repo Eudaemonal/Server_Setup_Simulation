@@ -56,7 +56,7 @@ private:
 	int server_id;
 };
 
-
+class Random;
 class Server;
 class Dispatcher;
 
@@ -65,7 +65,7 @@ class Dispatcher;
 
 std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::vector<float> service,
 	       	int m, float setup_time,
-	       	float delayedoff_time, float time_end);
+	       	float delayedoff_time, float time_end, bool reproducible);
 
 
 #endif

@@ -36,6 +36,43 @@ int decimals_float(float n){
 	return t.length();
 }
 
+// random number generator
+class Random{
+public:
+	// random number with LGM method, with period 2^31
+	Random(unsigned int seed)
+		:__x(seed)
+	{
+		__m = 0x7fffffff;
+		__a = 0x41a7;
+		__b = 0;
+	}
+
+	// generate persudo random int sequence
+	unsigned int random(){
+		__x = (__a * __x + __b) % __m;
+		return __x;
+	}
+	
+	// generate random float within [0, 1]
+	float randomfloat(){
+		__x = (__a * __x + __b) % __m;
+		return (float)__x/__m;
+	}
+	
+	// generate exponential distribution
+	float exponential(float lambda){
+		return -lambda * log(1 - randomfloat());
+	}
+private:
+	unsigned int __m;
+	unsigned int __a;
+	unsigned int __b;
+	unsigned int __x;
+};
+
+
+
 
 class Server{
 public:
@@ -359,7 +396,7 @@ private:
 
 std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::vector<float> service,
 	       	int m, float setup_time,
-	       	float delayedoff_time, float time_end)
+	       	float delayedoff_time, float time_end, bool reproducible)
 {
 
 	clock_v.clear();
@@ -374,34 +411,58 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 		float lambda = arrival[0];
 		float mu = service[0];
 
-		std::random_device rd;
-		std::mt19937 gen(rd());
-
-		// inter-arrival probability distribution
-		std::exponential_distribution<float> d_arrival(lambda);
-
-		// service time probability distribution
-		std::exponential_distribution<float> d_service(mu);
-
 		// generate simulation data
 		std::vector<float> r_arrival;
 		std::vector<float> r_service;
 
-		float at;
-		float st;
-		while(at < time_end){
-			st = 0;
-			for(int i=0; i < 3; ++i){
-				st += d_service(gen);
+		if(reproducible){
+			Random rd(1);
+			float at;
+			float st;
+			while(at < time_end){
+				st = 0;
+				for(int i=0; i < 3; ++i){
+					st+=rd.exponential(mu);
+				}
+				at += 1/rd.exponential(lambda);
+
+				st = roundf(st * 10) / 10;
+				at = roundf(at * 10) / 10;
+
+				r_arrival.push_back(at);
+				r_service.push_back(st);
 			}
-			at += 1/d_arrival(gen);
 
-			st = roundf(st * 10) / 10;
-			at = roundf(at * 10) / 10;
+		}else{
+		
+			std::random_device rd;
+			std::mt19937 gen(rd());
 
-			r_arrival.push_back(at);
-			r_service.push_back(st);
+			// inter-arrival probability distribution
+			std::exponential_distribution<float> d_arrival(lambda);
+
+			// service time probability distribution
+			std::exponential_distribution<float> d_service(mu);
+			float at;
+			float st;
+			while(at < time_end){
+				st = 0;
+				for(int i=0; i < 3; ++i){
+					st += d_service(gen);
+				}
+				at += 1/d_arrival(gen);
+
+				st = roundf(st * 10) / 10;
+				at = roundf(at * 10) / 10;
+
+				r_arrival.push_back(at);
+				r_service.push_back(st);
+			}
+
 		}
+
+
+
 
 		debug_cout( "arrival time: \n");
 		for(auto it: r_arrival)
