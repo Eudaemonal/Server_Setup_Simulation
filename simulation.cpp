@@ -417,9 +417,10 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 		std::vector<float> r_service;
 
 		if(reproducible){
+			debug_cout("random reproducible\n");
 			Random rd(1);
-			float at;
-			float st;
+			float at = 0;
+			float st = 0;
 			while(at < time_end){
 				st = 0;
 				for(int i=0; i < 3; ++i){
@@ -435,7 +436,7 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 			}
 
 		}else{
-		
+			debug_cout("random unreproducible\n");
 			std::random_device rd;
 			std::mt19937 gen(rd());
 
@@ -444,8 +445,8 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 
 			// service time probability distribution
 			std::exponential_distribution<float> d_service(mu);
-			float at;
-			float st;
+			float at = 0;
+			float st = 0;
 			while(at < time_end){
 				st = 0;
 				for(int i=0; i < 3; ++i){
