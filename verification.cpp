@@ -129,8 +129,6 @@ int main(int argc, char *argv[]){
 	const int nintervals=10;
 
 
-	//std::map<int, int> at_dist;
-	//std::map<int, int> st_dist;
 	int p[nintervals]={};
 	
 

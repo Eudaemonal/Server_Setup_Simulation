@@ -38,8 +38,6 @@ int decimals_float(float n){
 
 
 
-
-
 class Server{
 public:
 	Server(int id, float t_setup, float t_delay, float clk)
@@ -381,41 +379,16 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 		std::vector<float> r_arrival;
 		std::vector<float> r_service;
 
-		if(reproducible){
-			debug_cout("random reproducible\n");
-			reproducible_redo:
-			Random rd(1);
-			float at = 0;
-			float st = 0;
-			float exp_et = 0;
-			float sst = 0;
-			while(exp_et < time_end){
-				st = 0;
-				for(int i=0; i < 3; ++i){
-					st+=rd.exponential(mu);
-				}
-				at += 1/rd.exponential(lambda);
 
-				st = roundf(st * 10) / 10;
-				at = roundf(at * 10) / 10;
-
-				sst += st;
-				r_arrival.push_back(at);
-				r_service.push_back(st);
-
-				exp_et = at + setup_time + sst;
+		do{
+			unsigned int seed;
+			if(reproducible){
+				seed = 1;
+			}else{
+				std::random_device rd;
+				seed = rd();
 			}
-			r_arrival.pop_back();
-			r_service.pop_back();
-
-			if(r_arrival.size()==0) goto reproducible_redo;
-
-		}else{
-			debug_cout("random unreproducible\n");
-			// redo if condition not met
-			unreproducible_redo:
-			std::random_device rd;
-			std::mt19937 gen(rd());
+			std::mt19937 gen(seed);
 
 			// inter-arrival probability distribution
 			std::exponential_distribution<float> d_arrival(lambda);
@@ -444,11 +417,11 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 			}
 			r_arrival.pop_back();
 			r_service.pop_back();
-
-			// regenerate if no cases
-			if(r_arrival.size()==0) goto unreproducible_redo;
-
 		}
+		while(r_arrival.size()==0);
+
+
+
 
 		#ifdef DEBUG
 		debug_cout( "arrival time: \n");
