@@ -1,21 +1,16 @@
 #include <iostream>
-#include <fstream>
-#include <string>
+#include "simulation.hpp"
+#include <map>
+#include <random>
 #include <iomanip>
 #include <cmath>
 #include <sstream>
-#include "simulation.hpp"
+#include <stdlib.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/glut.h>
 
 
-/*
-Useage: 
-make
-./design
-
-*/
 
 #define FONT GLUT_BITMAP_9_BY_15
 
@@ -33,56 +28,10 @@ void createHistogram(int len, std::vector<float> data);
 void renderBitmapString(float x,float y, std::string str);
 
 // all mean response times
-static std::vector<float> mrts;
-// all test cases of Tc
-static std::vector<float> tcv;
+static std::vector<float> y_value;
+static std::vector<float> x_value;
 
-float run(int seqnum, float d_time){
-	// setup containers for arguments
-	std::string mode;
 
-	int n_server;
-	float setup_time;
-	float delayedoff_time;
-	float time_end;
-	bool reproducible = false;
-
-	std::vector<float> arrival;
-	std::vector<float> service;
-
-	// read arguments from files
-	mode = "random";
-
-	n_server = 5;
-	setup_time = 5;
-	delayedoff_time = d_time;
-
-	// directly related to largest Tc
-	// setting a too small value causes no test cases generated
-	time_end = 100;
-
-	arrival.push_back(0.35);
-	service.push_back(1);
-	
-	// check arguemnt value
-	debug_cout( "Mode: " << mode << "\n");
-	debug_cout( "N server: " << n_server << "\n");
-	debug_cout( "setup: " << setup_time << "\n");
-	debug_cout( "delayed off: " << delayedoff_time << "\n");
-	debug_cout( "arrival: "<< arrival);
-	debug_cout( "service: " << service);
-
-	// run simulation function, results store in finished_jobs
-	std::vector<Job* > finished_jobs;
-	finished_jobs = simulate(mode, arrival, service, n_server, setup_time,
-	       			delayedoff_time, time_end, reproducible);
-
-	float sum = 0;
-	for(int i = 0; i < finished_jobs.size(); ++i){
-		sum += (finished_jobs[i]->get_departure() - finished_jobs[i]->get_arrival());
-	}
-	return sum / (float)finished_jobs.size();
-}
 
 void createHistogram(int len, std::vector<float> data){
     float x, y = 0.0, width = 2.0;
@@ -92,7 +41,7 @@ void createHistogram(int len, std::vector<float> data){
         createBox(x, y, width, data[i]);
 
 		std::stringstream stream;
-		stream << std::fixed << std::setprecision(1) << tcv[i];
+		stream << std::fixed << std::setprecision(1) << x_value[i];
 		std::string sn = stream.str();
 
         renderBitmapString(x, y, sn);
@@ -117,7 +66,7 @@ void display(){
 }
 
 void draw(){
-    createHistogram(mrts.size(), mrts);
+    createHistogram(y_value.size(), y_value);
 }
 
 
@@ -171,29 +120,61 @@ void draw_histogram(int argc, char *argv[]){
 
 
 int main(int argc, char *argv[]){
-	// notice: setting a too large number may cause overflow
-	// each Tc value will run n_test times
-	int n_test = 5000;
-	// notice: setting a too large number may cause overflow
-	// determines cases of Tc
-	int n_case = 16;
+	float mu = 1;
+	float lambda = 3.5;
 
-	float mrt;
-	for(int i=0; i < n_case; ++i){
-		tcv.push_back(0.1 * pow(2, i));
+
+	const int nrolls=10000;  // number of experiments
+	const int nstars=100;    // maximum number of stars to distribute
+	const int nintervals=10;
+
+
+	//std::map<int, int> at_dist;
+	//std::map<int, int> st_dist;
+	int p[nintervals]={};
+	
+
+	std::random_device rd;
+
+
+	std::mt19937 gen(1);
+	std::exponential_distribution<float> ed1(lambda);
+
+
+
+	float st = 0;
+	float at = 0;
+	for(int n = 0; n < nrolls; ++n){
+		// for(int i=0; i < 3; ++i){
+		// 	st+=rd.exponential(mu);
+		// }
+		// at = 1/rd.exponential(lambda);
+
+
+
+		float number;
+		number = ed1(gen);
+		
+
+		std::cout << number << "\n";
+		if (number<1.0) ++p[int(nintervals*number)];
+
+
+		//at_dist[(int)at]++;
+		//st_dist[(int)st]++;
 	}
 
-	for(int i = 0; i < tcv.size(); ++i){
-		mrt = 0;
-		for(int j = 0; j < n_test; ++j){
-			mrt += run(0, tcv[i]);
-		}
-		mrt = mrt/n_test;
-		std::cout << "Tc: " << tcv[i] << " mean mrt: " << mrt << "\n";
+	std::cout << "exponential_distribution (" << lambda << "):\n";
+	std::cout << std::fixed; std::cout.precision(1);
 
-		mrts.push_back(mrt);
+	for (int i=0; i<nintervals; ++i) {
+		std::cout << float(i)/nintervals << "-" << float(i+1)/nintervals << ": ";
+		std::cout << std::string(p[i]*nstars/nrolls,'*') << std::endl;
 	}
 
-	draw_histogram(argc, argv);
+
+
+
+	return 0;
+
 }
-

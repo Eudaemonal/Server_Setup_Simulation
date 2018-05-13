@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <string>
 #include <vector>
-#include <cmath>
 #include <assert.h>
 #include <iomanip>
 #include <random>
@@ -36,40 +35,7 @@ int decimals_float(float n){
 	return t.length();
 }
 
-// random number generator
-class Random{
-public:
-	// random number with LGM method, with period 2^31
-	Random(unsigned int seed)
-		:__x(seed)
-	{
-		__m = 0x7fffffff;
-		__a = 0x41a7;
-		__b = 0;
-	}
 
-	// generate persudo random int sequence
-	unsigned int random(){
-		__x = (__a * __x + __b) % __m;
-		return __x;
-	}
-	
-	// generate random float within [0, 1]
-	float randomfloat(){
-		__x = (__a * __x + __b) % __m;
-		return (float)__x/__m;
-	}
-	
-	// generate exponential distribution
-	float exponential(float lambda){
-		return -lambda * log(1 - randomfloat());
-	}
-private:
-	unsigned int __m;
-	unsigned int __a;
-	unsigned int __b;
-	unsigned int __x;
-};
 
 
 
@@ -329,7 +295,6 @@ public:
 					queue.erase(queue.begin());
 					queue[i]->marked();
 					
-					
 					debug_cout( "Server " << servers[0]->id << " process job "
 					<< "(" <<job->arrival_time << ", "<< job->service_time
 					<< ", " <<job->mark<< ", sid: " << job->server_id <<")\n");
@@ -418,6 +383,7 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 
 		if(reproducible){
 			debug_cout("random reproducible\n");
+			reproducible_redo:
 			Random rd(1);
 			float at = 0;
 			float st = 0;
@@ -442,8 +408,12 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 			r_arrival.pop_back();
 			r_service.pop_back();
 
+			if(r_arrival.size()==0) goto reproducible_redo;
+
 		}else{
 			debug_cout("random unreproducible\n");
+			// redo if condition not met
+			unreproducible_redo:
 			std::random_device rd;
 			std::mt19937 gen(rd());
 
@@ -474,6 +444,9 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 			}
 			r_arrival.pop_back();
 			r_service.pop_back();
+
+			// regenerate if no cases
+			if(r_arrival.size()==0) goto unreproducible_redo;
 
 		}
 
