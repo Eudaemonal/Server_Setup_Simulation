@@ -17,7 +17,7 @@ make
 
 */
 
-const int font=(int)GLUT_BITMAP_9_BY_15;
+#define FONT GLUT_BITMAP_9_BY_15
 
 #define X_LIMIT 50.0      // limit
 #define Y_LIMIT 20.0
@@ -150,7 +150,7 @@ void renderBitmapString(float x,float y, std::string str) {
 
   glRasterPos2f(x, y-0.8);
   for(int i=0; i<str.length(); ++i){
-    glutBitmapCharacter((void *)font, str.at(i));
+    glutBitmapCharacter(FONT, str.at(i));
   }
 
   
