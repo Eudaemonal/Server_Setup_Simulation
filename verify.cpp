@@ -33,27 +33,6 @@ static std::vector<float> y_value;
 static std::vector<float> x_value;
 
 
-template <typename T>
-T get_mean(std::vector<T> v){
-	T m;
-	T sum;
-	for(auto it = v.cbegin(); it!=v.cend(); ++it){
-		sum += *it;
-	}
-	m = sum / v.size();
-	return m;
-}
-
-template <typename T>
-T get_variance(std::vector<T> v){
-	T m = get_mean(v);
-	T tmp = 0;
-	for(auto it = v.cbegin(); it!=v.cend(); ++it){
-		tmp += pow(*it - m, 2);
-	}
-	return tmp / (v.size()-1);
-}
-
 void createHistogram(int len, std::vector<float> data){
     float x, y = 0.0, width = 2.0;
     int i;
@@ -195,7 +174,6 @@ int main(int argc, char *argv[]){
 	float st = 0;
 	float at = 0;
 	float number;
-	std::vector<float> sequence; 
 	for(int n = 0; n < nrolls; ++n){
 		st = 0;
 		for(int i=0; i < 3; ++i){
@@ -211,7 +189,6 @@ int main(int argc, char *argv[]){
 			number = st;
 		}
 
-		sequence.push_back(number);
 		//std::cout << number << "\n";
 		if (number< nintervals/resolution) ++p[int(resolution*number)];
 
@@ -232,20 +209,6 @@ int main(int argc, char *argv[]){
 	}
 
 
-	std::cout << std::fixed; std::cout.precision(5);
-	
-	std::cout << "mean:     " << get_mean<float>(sequence) << "\n";
-	std::cout << "variance: " << get_variance<float>(sequence) << "\n";
-
-	if(aors==true){
-		std::cout << "expected mean:     " << (1/lambda) << "\n";
-		std::cout << "expected variance: " << (1/pow(lambda, 2)) << "\n";
-	}
-	else{
-		std::cout << "expected mean:     " << 3*(1/mu) << "\n";
-		std::cout << "expected variance: " << 3*(1/pow(mu,2)) << "\n";
-	}
-	
 
 	draw_histogram(argc, argv);
 
