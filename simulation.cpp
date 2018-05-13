@@ -405,6 +405,7 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 
 	if(mode=="random"){
 		debug_cout("Simulation in random mode: \n");
+
 		assert(arrival.size()==1);
 		assert(service.size()==1);
 
@@ -416,10 +417,13 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 		std::vector<float> r_service;
 
 		if(reproducible){
+			debug_cout("random reproducible\n");
 			Random rd(1);
-			float at;
-			float st;
-			while(at < time_end){
+			float at = 0;
+			float st = 0;
+			float exp_et = 0;
+			float sst = 0;
+			while(exp_et < time_end){
 				st = 0;
 				for(int i=0; i < 3; ++i){
 					st+=rd.exponential(mu);
@@ -429,12 +433,17 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 				st = roundf(st * 10) / 10;
 				at = roundf(at * 10) / 10;
 
+				sst += st;
 				r_arrival.push_back(at);
 				r_service.push_back(st);
+
+				exp_et = at + setup_time + sst;
 			}
+			r_arrival.pop_back();
+			r_service.pop_back();
 
 		}else{
-		
+			debug_cout("random unreproducible\n");
 			std::random_device rd;
 			std::mt19937 gen(rd());
 
@@ -443,9 +452,11 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 
 			// service time probability distribution
 			std::exponential_distribution<float> d_service(mu);
-			float at;
-			float st;
-			while(at < time_end){
+			float at = 0;
+			float st = 0;
+			float exp_et = 0;
+			float sst = 0;
+			while(exp_et < time_end){
 				st = 0;
 				for(int i=0; i < 3; ++i){
 					st += d_service(gen);
@@ -455,15 +466,18 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 				st = roundf(st * 10) / 10;
 				at = roundf(at * 10) / 10;
 
+				sst += st;
+
 				r_arrival.push_back(at);
 				r_service.push_back(st);
+				exp_et = at + setup_time + sst;
 			}
+			r_arrival.pop_back();
+			r_service.pop_back();
 
 		}
 
-
-
-
+		#ifdef DEBUG
 		debug_cout( "arrival time: \n");
 		for(auto it: r_arrival)
 			debug_cout(it << "\n") ;
@@ -471,6 +485,7 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 		for(auto it: r_service)
 			debug_cout(it << "\n") ;
 		debug_cout("\n") ;
+		#endif
 
 		float m_clock = 0;
 		clock_v.push_back(0.0);
@@ -501,10 +516,15 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 
 			i++;
 			m_clock = clock_v[i];
+
+			debug_cout("assert master clock " <<  m_clock <<" < " << time_end << "\n");
+			//assert(m_clock < time_end);
 		}
 		// simulation finished
+		
 		debug_cout( "Simulation summary: \n");
 		float sum = 0;
+		#ifdef DEBUG
 		for(int i = 0; i < all_jobs.size(); ++i){
 			debug_cout(std::fixed << std::setprecision(3) 
 				<< all_jobs[i]->get_arrival() << " " 
@@ -513,6 +533,7 @@ std::vector<Job*> simulate(std::string mode, std::vector<float> arrival, std::ve
 		}
 		debug_cout(std::fixed << std::setprecision(3)
 			<< "mrt: "<<sum / (float)all_jobs.size() << "\n");
+		#endif
 
 	}else if(mode=="trace"){
 		debug_cout("Simulation in trace mode: \n");
