@@ -4,9 +4,13 @@
 
 #include <iostream>
 
-/* Compile: g++ -framework OpenGL GLUT ogl_test.cpp -o ogl_test
+/* Compile: 
+Macos
+g++ -framework OpenGL GLUT ogl_test.cpp -o ogl_test
  
-g++ ogl_test.cpp -o ogl_test -lGLU -lGL -lglut 
+Ubuntu
+g++ ogl_test.cpp -o ogl_test -lGLU -lGL -lglut
+
  * */
 
 using namespace std;
